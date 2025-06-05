@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/config/config.php';
 // tag_management_api.php
 
 error_reporting(E_ALL);
@@ -9,13 +10,8 @@ date_default_timezone_set('Europe/Amsterdam');
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
-$host = 'localhost';
-$db   = 'willem_smartvisitor';
-$user = 'willem_smartvisitor';
-$pass = '83_2Nlvz0';
-
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8mb4", $user, $pass);
+    $pdo = getDbConnection();
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->exec("SET time_zone = '+01:00'");
 } catch (PDOException $e) {

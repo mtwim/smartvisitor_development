@@ -1,6 +1,8 @@
 <?php
 // admin_scanners_api.php
 
+require_once __DIR__ . '/config/config.php';
+
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
@@ -15,7 +17,7 @@ $user = 'willem_smartvisitor';
 $pass = '83_2Nlvz0';
 
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8mb4", $user, $pass);
+    $pdo = getDbConnection();
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->exec("SET time_zone = '+01:00'");
 } catch (PDOException $e) {

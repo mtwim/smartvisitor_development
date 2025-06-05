@@ -35,4 +35,12 @@ tag_webhook.log
 
 # Node modules (als je frontend tools gebruikt)
 /node_modules/
-package-lock.json 
+package-lock.json
+
+# Nieuwe structuur
+/config/
+/public/
+/src/
+/tests/
+README.md
+composer.json 

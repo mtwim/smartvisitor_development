@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/config/config.php';
 // tag_webhook.php - Uitgebreid met tag koppeling
 
 error_reporting(E_ALL);
@@ -33,13 +34,8 @@ if ($secret !== $expected_secret) {
     exit;
 }
 
-$host = 'localhost';
-$db   = 'willem_smartvisitor';
-$user = 'willem_smartvisitor';
-$pass = '83_2Nlvz0';
-
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8mb4", $user, $pass);
+    $pdo = getDbConnection();
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->exec("SET time_zone = '+01:00'");
 

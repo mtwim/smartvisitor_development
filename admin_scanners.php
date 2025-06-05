@@ -1,9 +1,9 @@
 <?php
+require_once __DIR__ . '/config/config.php';
 // admin_scanners.php - Basis admin interface
 
 // Database verbinding (hergebruik je bestaande configuratie)
-$pdo = new PDO("mysql:host=localhost;dbname=willem_smartvisitor;charset=utf8mb4", 
-               "willem_smartvisitor", "83_2Nlvz0");
+$pdo = getDbConnection();
 
 // Scanners ophalen
 $stmt = $pdo->query("SELECT * FROM scanners ORDER BY created_at DESC");
