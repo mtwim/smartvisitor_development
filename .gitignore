@@ -1,0 +1,38 @@
+# PHP specifiek
+/vendor/
+composer.lock
+*.log
+*.cache
+
+# Configuratie bestanden
+config.php
+.env
+*.env
+
+# IDE bestanden
+.idea/
+.vscode/
+*.sublime-*
+
+# Systeem bestanden
+.DS_Store
+Thumbs.db
+
+# Log bestanden
+*.log
+logs/
+tag_webhook.log
+
+# Tijdelijke bestanden
+*.tmp
+*.temp
+*.swp
+*~
+
+# Build bestanden
+/build/
+/dist/
+
+# Node modules (als je frontend tools gebruikt)
+/node_modules/
+package-lock.json 

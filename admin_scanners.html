@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartVisitor - Scanner Beheer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        
+        table { 
+            border-collapse: collapse; 
+            width: 100%; 
+            margin-bottom: 20px;
+            background-color: white;
+        }
+        
+        th, td { 
+            border: 1px solid #ddd; 
+            padding: 12px; 
+            text-align: left; 
+        }
+        
+        th { 
+            background-color: #f8f9fa; 
+            font-weight: 600;
+            color: #333;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        tr:hover {
+            background-color: #f0f8ff;
+        }
+        
+        .status-online { 
+            color: #28a745; 
+            font-weight: bold; 
+        }
+        
+        .status-offline { 
+            color: #dc3545; 
+            font-weight: bold; 
+        }
+        
+        .status-ready { 
+            color: #007bff; 
+            font-weight: bold; 
+        }
+        
+        .status-unconfigured { 
+            color: #ffc107; 
+            font-weight: bold; 
+        }
+        
+        .btn { 
+            padding: 8px 16px; 
+            margin: 2px; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .btn-identify { 
+            background-color: #ff9800; 
+            color: white; 
+        }
+        
+        .btn-identify:hover {
+            background-color: #f57c00;
+        }
+        
+        .btn-edit { 
+            background-color: #2196F3; 
+            color: white; 
+        }
+        
+        .btn-edit:hover {
+            background-color: #1976D2;
+        }
+        
+        .btn-save { 
+            background-color: #4CAF50; 
+            color: white; 
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        
+        .btn-save:hover {
+            background-color: #45a049;
+        }
+        
+        .legend { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px; 
+            border-radius: 8px; 
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .legend h3 { 
+            margin-top: 0; 
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .legend-item { 
+            display: inline-block; 
+            margin-right: 25px; 
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .legend-color { 
+            display: inline-block; 
+            width: 20px; 
+            height: 20px; 
+            margin-right: 8px; 
+            vertical-align: middle; 
+            border-radius: 3px;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        .modal { 
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100%; 
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-content { 
+            background-color: #fefefe; 
+            margin: 5% auto; 
+            padding: 30px; 
+            border: none; 
+            width: 90%;
+            max-width: 600px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .close { 
+            color: #aaa; 
+            float: right; 
+            font-size: 28px; 
+            font-weight: bold; 
+            cursor: pointer;
+            line-height: 1;
+        }
+        
+        .close:hover { 
+            color: #333; 
+        }
+        
+        .form-group { 
+            margin-bottom: 20px; 
+        }
+        
+        .form-group label { 
+            display: block; 
+            margin-bottom: 8px; 
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input, .form-group select, .form-group textarea { 
+            width: 100%; 
+            padding: 12px; 
+            border: 2px solid #ddd; 
+            border-radius: 4px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-online .status-indicator {
+            background-color: #28a745;
+            box-shadow: 0 0 5px #28a745;
+        }
+        
+        .status-offline .status-indicator {
+            background-color: #dc3545;
+        }
+        
+        .refresh-info {
+            background-color: #e3f2fd;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196F3;
+            font-size: 14px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .error-message {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 SmartVisitor Scanner Beheer</h1>
+        
+        <div class="refresh-info">
+            ℹ️ Deze pagina wordt automatisch ververst elke 3 seconden. Laatste update: <span id="lastUpdate">-</span>
+        </div>
+        
+        <div class="legend">
+            <h3>💡 LED Status Legenda</h3>
+            <div class="legend-item">
+                <span class="legend-color" style="background-color: #ffffff; border: 1px solid #ccc;"></span>
+                <span>Opstarten - Wit</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background-color: #0000ff;"></span>
+                <span>WiFi Verbinden - Blauw knipperend</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background-color: #00ff00;"></span>
+                <span>WiFi OK - Groen vast</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background-color: #ffff00;"></span>
+                <span>Registreren - Geel knipperend</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background-color: #00ff00;"></span>
+                <span>Klaar - Groen ademend</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background-color: #ffa500;"></span>
+                <span>Scannen - Oranje</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background-color: #ff0000;"></span>
+                <span>Fout - Rood knipperend</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet);"></span>
+                <span>Identificeren - Regenboog</span>
+            </div>
+        </div>
+        
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+        
+        <table id="scannersTable">
+            <thead>
+                <tr>
+                    <th>Scanner ID</th>
+                    <th>MAC Adres</th>
+                    <th>Status</th>
+                    <th>Project</th>
+                    <th>Locatie</th>
+                    <th>Zone</th>
+                    <th>Laatste Heartbeat</th>
+                    <th>Acties</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="8" class="loading">🔄 Laden van scanners...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>⚙️ Scanner Configureren</h2>
+            <form id="editForm">
+                <input type="hidden" id="editScannerId">
+                
+                <div class="form-group">
+                    <label for="editProject">📋 Project:</label>
+                    <select id="editProject">
+                        <option value="">Selecteer project...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editLocation">📍 Locatie:</label>
+                    <input type="text" id="editLocation" placeholder="Bijv. Hoofdingang, Zaal A, etc.">
+                </div>
+                
+                <div class="form-group">
+                    <label for="editZone">🏷️ Zone:</label>
+                    <input type="text" id="editZone" placeholder="Bijv. Entree, VIP, Backstage, etc.">
+                </div>
+                
+                <div class="form-group">
+                    <label for="editDescription">📝 Beschrijving:</label>
+                    <textarea id="editDescription" rows="3" placeholder="Optionele beschrijving van de scanner..."></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-save">💾 Opslaan</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let refreshInterval;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            loadScanners();
+            loadProjects();
+            
+            // Auto-refresh elke 3 seconden (sneller voor realtime updates)
+            refreshInterval = setInterval(loadScanners, 3000);
+            
+            setupModal();
+            
+            document.getElementById('editForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveScanner();
+            });
+        });
+        
+        function setupModal() {
+            const modal = document.getElementById('editModal');
+            const closeBtn = document.getElementsByClassName('close')[0];
+            
+            closeBtn.onclick = function() {
+                modal.style.display = 'none';
+            }
+            
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = 'none';
+                }
+            }
+        }
+        
+        function loadScanners() {
+            fetch('admin_scanners_api.php?action=list')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Received scanner data:', data);
+                    
+                    if (data.error) {
+                        showError('API Error: ' + data.error);
+                        return;
+                    }
+                    
+                    hideError();
+                    updateLastRefreshTime();
+                    
+                    const tbody = document.querySelector('#scannersTable tbody');
+                    tbody.innerHTML = '';
+                    
+                    if (data.scanners && data.scanners.length > 0) {
+                        data.scanners.forEach(scanner => {
+                            const row = tbody.insertRow();
+                            const statusText = getStatusText(scanner.status, scanner.last_heartbeat_display, scanner.connection_status);
+                            
+                            row.innerHTML = `
+                                <td><strong>${scanner.scanner_id || 'N/A'}</strong></td>
+                                <td><code>${scanner.mac_address || 'N/A'}</code></td>
+                                <td class="status-${scanner.connection_status}">
+                                    <span class="status-indicator"></span>
+                                    ${statusText}
+                                </td>
+                                <td>${scanner.project_name || '<em>Niet toegewezen</em>'}</td>
+                                <td>${scanner.location || '-'}</td>
+                                <td>${scanner.zone || '-'}</td>
+                                <td>${formatDate(scanner.last_heartbeat_display)}</td>
+                                <td>
+                                    <button class="btn btn-identify" onclick="identifyScanner('${scanner.scanner_id}')" title="Laat LED ring regenboog kleuren tonen">
+                                        🌈 Identificeer
+                                    </button>
+                                    <button class="btn btn-edit" onclick="editScanner('${scanner.scanner_id}')" title="Configureer deze scanner">
+                                        ⚙️ Bewerken
+                                    </button>
+                                </td>
+                            `;
+                        });
+                    } else {
+                        const row = tbody.insertRow();
+                        row.innerHTML = '<td colspan="8" style="text-align: center; color: #666; font-style: italic;">📭 Geen scanners gevonden.</td>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading scanners:', error);
+                    showError('Fout bij laden van scanners: ' + error.message);
+                    
+                    const tbody = document.querySelector('#scannersTable tbody');
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: red;">❌ Fout bij laden van scanners</td></tr>';
+                });
+        }
+        
+        function loadProjects() {
+            fetch('admin_scanners_api.php?action=projects')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('editProject');
+                    select.innerHTML = '<option value="">Selecteer project...</option>';
+                    
+                    if (data.projects && data.projects.length > 0) {
+                        data.projects.forEach(project => {
+                            const option = document.createElement('option');
+                            option.value = project.id;
+                            option.textContent = project.name;
+                            select.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading projects:', error);
+                });
+        }
+        
+        function getStatusText(status, lastHeartbeat, connectionStatus) {
+            if (connectionStatus === 'offline') {
+                return 'Offline';
+            }
+            
+            // Verbeterde status mapping gebaseerd op database status
+            switch (status) {
+                case 'ready': return 'Klaar voor scan';
+                case 'unconfigured': return 'Niet geconfigureerd';
+                case 'scanning': return 'Aan het scannen';
+                case 'active': 
+                    return 'Actief';
+                default: 
+                    return connectionStatus === 'online' ? 'Online' : 'Onbekend';
+            }
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString) return 'Nooit';
+            
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMinutes = Math.floor((now - date) / (1000 * 60));
+            
+            if (diffMinutes < 1) return 'Nu';
+            if (diffMinutes < 60) return `${diffMinutes} min geleden`;
+            if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)} uur geleden`;
+            
+            return date.toLocaleString('nl-NL');
+        }
+        
+        function updateLastRefreshTime() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('nl-NL');
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = '❌ ' + message;
+            errorDiv.style.display = 'block';
+        }
+        
+        function hideError() {
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+        
+        function identifyScanner(scannerId) {
+            const formData = new FormData();
+            formData.append('action', 'identify');
+            formData.append('scanner_id', scannerId);
+            formData.append('secret', 'y7s3fP9eV4qLm29X');
+            
+            fetch('scanner_admin.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('🌈 Identificatie signaal verzonden! De LED ring zou nu regenboog kleuren moeten tonen voor 3 seconden.');
+                } else {
+                    alert('❌ Fout bij verzenden identificatie: ' + (data.error || 'Onbekende fout'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('❌ Netwerkfout bij verzenden identificatie');
+            });
+        }
+        
+        function editScanner(scannerId) {
+            fetch(`admin_scanners_api.php?action=get&scanner_id=${encodeURIComponent(scannerId)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.scanner) {
+                        const scanner = data.scanner;
+                        document.getElementById('editScannerId').value = scanner.scanner_id;
+                        document.getElementById('editProject').value = scanner.project_id || '';
+                        document.getElementById('editLocation').value = scanner.location || '';
+                        document.getElementById('editZone').value = scanner.zone || '';
+                        document.getElementById('editDescription').value = scanner.description || '';
+                        
+                        document.getElementById('editModal').style.display = 'block';
+                    } else {
+                        alert('❌ Fout bij ophalen scanner gegevens');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('❌ Netwerkfout bij ophalen scanner gegevens');
+                });
+        }
+        
+        function saveScanner() {
+            const formData = new FormData();
+            formData.append('action', 'update_config');
+            formData.append('scanner_id', document.getElementById('editScannerId').value);
+            formData.append('project_id', document.getElementById('editProject').value);
+            formData.append('location', document.getElementById('editLocation').value);
+            formData.append('zone', document.getElementById('editZone').value);
+            formData.append('description', document.getElementById('editDescription').value);
+            formData.append('secret', 'y7s3fP9eV4qLm29X');
+            
+            fetch('scanner_admin.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ Scanner configuratie opgeslagen! De Arduino ontvangt de nieuwe instellingen binnen 10 seconden.');
+                    document.getElementById('editModal').style.display = 'none';
+                    loadScanners();
+                } else {
+                    alert('❌ Fout bij opslaan: ' + (data.error || 'Onbekende fout'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('❌ Netwerkfout bij opslaan');
+            });
+        }
+        
+        window.addEventListener('beforeunload', function() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>

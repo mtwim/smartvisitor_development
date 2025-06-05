@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartVisitor - Tag Beheer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1, h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            background-color: #f8f9fa;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 8px 8px 0 0;
+            margin-right: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .tab.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .tab:hover:not(.active) {
+            background-color: #e9ecef;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        table { 
+            border-collapse: collapse; 
+            width: 100%; 
+            margin-bottom: 20px;
+            background-color: white;
+        }
+        
+        th, td { 
+            border: 1px solid #ddd; 
+            padding: 12px; 
+            text-align: left; 
+        }
+        
+        th { 
+            background-color: #f8f9fa; 
+            font-weight: 600;
+            color: #333;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        tr:hover {
+            background-color: #f0f8ff;
+        }
+        
+        .btn { 
+            padding: 8px 16px; 
+            margin: 2px; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .btn-primary { 
+            background-color: #007bff; 
+            color: white; 
+        }
+        
+        .btn-success { 
+            background-color: #28a745; 
+            color: white; 
+        }
+        
+        .btn-warning { 
+            background-color: #ffc107; 
+            color: black; 
+        }
+        
+        .btn-danger { 
+            background-color: #dc3545; 
+            color: white; 
+        }
+        
+        .btn-info { 
+            background-color: #17a2b8; 
+            color: white; 
+        }
+        
+        .btn-secondary { 
+            background-color: #6c757d; 
+            color: white; 
+        }
+        
+        .form-group { 
+            margin-bottom: 20px; 
+        }
+        
+        .form-group label { 
+            display: block; 
+            margin-bottom: 8px; 
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input, .form-group select, .form-group textarea { 
+            width: 100%; 
+            padding: 12px; 
+            border: 2px solid #ddd; 
+            border-radius: 4px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+        }
+        
+        .modal { 
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100%; 
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content { 
+            background-color: #fefefe; 
+            margin: 5% auto; 
+            padding: 30px; 
+            border: none; 
+            width: 90%;
+            max-width: 600px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .close { 
+            color: #aaa; 
+            float: right; 
+            font-size: 28px; 
+            font-weight: bold; 
+            cursor: pointer;
+        }
+        
+        .close:hover { 
+            color: #333; 
+        }
+        
+        .status-waiting {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin: 10px 0;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .status-linked {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin: 10px 0;
+            border-left: 4px solid #28a745;
+        }
+        
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin: 10px 0;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .refresh-info {
+            background-color: #e3f2fd;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196F3;
+            font-size: 14px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .card {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .auto-refresh-toggle {
+            margin-left: 10px;
+        }
+        
+        .quick-link-card {
+            border: 2px solid #4CAF50;
+            background-color: #f8fff8;
+        }
+        
+        .pending-count {
+            background-color: #ffc107;
+            color: #000;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+        
+        .fade-out {
+            opacity: 0;
+            transition: opacity 0.5s ease-out;
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .unlink-section {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .unlink-section h3 {
+            color: #856404;
+            margin-bottom: 15px;
+        }
+        
+        .tag-input-group {
+            display: flex;
+            gap: 10px;
+            align-items: end;
+        }
+        
+        .tag-input-group .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏷️ SmartVisitor Tag Beheer</h1>
+        
+        <div class="refresh-info">
+            ℹ️ Auto-refresh: 
+            <label class="auto-refresh-toggle">
+                <input type="checkbox" id="autoRefreshToggle" checked> Ingeschakeld
+            </label>
+            | Laatste update: <span id="lastUpdate">-</span>
+            | Wachtende scans: <span id="pendingCount">0</span>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('contacts')">👥 Contacten</button>
+            <button class="tab" onclick="showTab('tags')">🏷️ Tag Koppelingen</button>
+            <button class="tab" onclick="showTab('pending')">⏳ Wacht op Scan <span id="pendingTabCount" class="pending-count" style="display: none;">0</span></button>
+            <button class="tab" onclick="showTab('scans')">📊 Recente Scans</button>
+        </div>
+        
+        <!-- Contacten Tab -->
+        <div id="contacts" class="tab-content active">
+            <div class="grid">
+                <div class="card">
+                    <h2>👥 Contacten Beheer</h2>
+                    <button class="btn btn-success" onclick="showAddContactModal()">➕ Nieuw Contact</button>
+                    
+                    <table id="contactsTable">
+                        <thead>
+                            <tr>
+                                <th>Naam</th>
+                                <th>Functie</th>
+                                <th>Bedrijf</th>
+                                <th>Email</th>
+                                <th>Tag Status</th>
+                                <th>Acties</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="6">🔄 Laden...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="card quick-link-card">
+                    <h2>🏷️ Snelle Tag Koppeling</h2>
+                    <p><strong>💡 Tip:</strong> Auto-refresh wordt automatisch uitgeschakeld tijdens het selecteren!</p>
+                    
+                    <div class="form-group">
+                        <label for="quickContact">Selecteer Contact:</label>
+                        <select id="quickContact" onchange="pauseAutoRefresh()">
+                            <option value="">Kies een contact...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="quickScanner">Selecteer Scanner:</label>
+                        <select id="quickScanner" onchange="pauseAutoRefresh()">
+                            <option value="">Alle scanners</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-warning" onclick="waitForScan()">⏳ Wacht op Scan</button>
+                    <button class="btn btn-info" onclick="resumeAutoRefresh()">🔄 Herstart Auto-refresh</button>
+                    <div id="waitingStatus" style="margin-top: 10px;"></div>
+                    
+                    <!-- Nieuwe ontkoppel sectie -->
+                    <div class="unlink-section">
+                        <h3>🔗 Tag Ontkoppelen</h3>
+                        <p>Voer een Tag ID in om deze te ontkoppelen van het contact:</p>
+                        <div class="tag-input-group">
+                            <div class="form-group">
+                                <label for="unlinkTagId">Tag ID:</label>
+                                <input type="text" id="unlinkTagId" placeholder="Bijv. Q300E2806915000600B50A346485696">
+                            </div>
+                            <button class="btn btn-danger" onclick="unlinkTagById()">🔗 Ontkoppelen</button>
+                        </div>
+                        <div id="unlinkStatus" style="margin-top: 10px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tag Koppelingen Tab -->
+        <div id="tags" class="tab-content">
+            <h2>🏷️ Tag Koppelingen</h2>
+            <div class="refresh-info">
+                💡 <strong>Tip:</strong> Gebruik de "🔗 Ontkoppelen" knop om verkeerde koppelingen te verwijderen.
+            </div>
+            <table id="tagLinksTable">
+                <thead>
+                    <tr>
+                        <th>Tag ID</th>
+                        <th>Contact</th>
+                        <th>Bedrijf</th>
+                        <th>Scanner</th>
+                        <th>Gekoppeld op</th>
+                        <th>Acties</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="6">🔄 Laden...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Wacht op Scan Tab -->
+        <div id="pending" class="tab-content">
+            <h2>⏳ Wacht op Scan</h2>
+            <table id="pendingTable">
+                <thead>
+                    <tr>
+                        <th>Contact</th>
+                        <th>Scanner</th>
+                        <th>Gestart</th>
+                        <th>Verloopt</th>
+                        <th>Status</th>
+                        <th>Acties</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="6">🔄 Laden...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Recente Scans Tab -->
+        <div id="scans" class="tab-content">
+            <h2>📊 Recente Scans</h2>
+            <table id="scansTable">
+                <thead>
+                    <tr>
+                        <th>Tijd</th>
+                        <th>Tag ID</th>
+                        <th>Contact</th>
+                        <th>Scanner</th>
+                        <th>Locatie</th>
+                        <th>Project</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="6">🔄 Laden...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Contact Modal -->
+    <div id="contactModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="contactModalTitle">➕ Nieuw Contact</h2>
+            <form id="contactForm">
+                <input type="hidden" id="contactId">
+                
+                <div class="form-group">
+                    <label for="fullName">Volledige Naam:</label>
+                    <input type="text" id="fullName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="functionTitle">Functie:</label>
+                    <input type="text" id="functionTitle">
+                </div>
+                
+                <div class="form-group">
+                    <label for="company">Bedrijf:</label>
+                    <input type="text" id="company">
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email">
+                </div>
+                
+                <div class="form-group">
+                    <label for="phone">Telefoon:</label>
+                    <input type="tel" id="phone">
+                </div>
+                
+                <div class="form-group">
+                    <label for="dietaryRequirements">Dieetwensen:</label>
+                    <textarea id="dietaryRequirements" rows="3"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="notes">Notities:</label>
+                    <textarea id="notes" rows="3"></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-success">💾 Opslaan</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let refreshInterval;
+        let currentTab = 'contacts';
+        let autoRefreshEnabled = true;
+        let autoRefreshPaused = false;
+        let pauseTimeout;
+        let lastPendingCount = 0;
+        let lastTagLinksCount = 0;
+        
+        // Bewaar geselecteerde waarden
+        let savedSelections = {
+            quickContact: '',
+            quickScanner: ''
+        };
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAllData();
+            startAutoRefresh();
+            setupModal();
+            setupAutoRefreshToggle();
+            
+            document.getElementById('contactForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveContact();
+            });
+        });
+        
+        function setupAutoRefreshToggle() {
+            const toggle = document.getElementById('autoRefreshToggle');
+            toggle.addEventListener('change', function() {
+                autoRefreshEnabled = this.checked;
+                if (autoRefreshEnabled && !autoRefreshPaused) {
+                    startAutoRefresh();
+                } else {
+                    stopAutoRefresh();
+                }
+            });
+        }
+        
+        function startAutoRefresh() {
+            if (refreshInterval) clearInterval(refreshInterval);
+            if (autoRefreshEnabled && !autoRefreshPaused) {
+                refreshInterval = setInterval(loadAllData, 2000);
+            }
+        }
+        
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+        }
+        
+        function pauseAutoRefresh() {
+            autoRefreshPaused = true;
+            stopAutoRefresh();
+            
+            savedSelections.quickContact = document.getElementById('quickContact').value;
+            savedSelections.quickScanner = document.getElementById('quickScanner').value;
+            
+            if (pauseTimeout) clearTimeout(pauseTimeout);
+            
+            pauseTimeout = setTimeout(() => {
+                resumeAutoRefresh();
+            }, 30000);
+            
+            console.log('Auto-refresh gepauzeerd - selecties bewaard');
+        }
+        
+        function resumeAutoRefresh() {
+            autoRefreshPaused = false;
+            if (pauseTimeout) {
+                clearTimeout(pauseTimeout);
+                pauseTimeout = null;
+            }
+            
+            if (autoRefreshEnabled) {
+                startAutoRefresh();
+                console.log('Auto-refresh hervat');
+            }
+        }
+        
+        function setupModal() {
+            const modal = document.getElementById('contactModal');
+            const closeBtn = document.getElementsByClassName('close')[0];
+            
+            closeBtn.onclick = function() {
+                modal.style.display = 'none';
+            }
+            
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = 'none';
+                }
+            }
+        }
+        
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            currentTab = tabName;
+        }
+        
+        function loadAllData() {
+            loadContacts();
+            loadTagLinks();
+            loadPendingScans();
+            loadRecentScans();
+            loadScanners();
+            updateLastRefreshTime();
+        }
+        
+        function loadContacts() {
+            fetch('tag_management_api.php?action=contacts')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.querySelector('#contactsTable tbody');
+                    const select = document.getElementById('quickContact');
+                    
+                    tbody.innerHTML = '';
+                    
+                    const currentSelection = select.value;
+                    select.innerHTML = '<option value="">Kies een contact...</option>';
+                    
+                    if (data.contacts && data.contacts.length > 0) {
+                        data.contacts.forEach(contact => {
+                            const row = tbody.insertRow();
+                            const tagStatus = contact.tag_id ? 
+                                `<span class="status-linked">🏷️ ${contact.tag_id}</span>` : 
+                                '<span class="status-waiting">⏳ Geen tag</span>';
+                            
+                            row.innerHTML = `
+                                <td><strong>${contact.full_name}</strong></td>
+                                <td>${contact.function_title || '-'}</td>
+                                <td>${contact.company || '-'}</td>
+                                <td>${contact.email || '-'}</td>
+                                <td>${tagStatus}</td>
+                                <td>
+                                    <button class="btn btn-primary" onclick="editContact(${contact.id})">✏️ Bewerken</button>
+                                    ${contact.tag_id ? `<button class="btn btn-secondary" onclick="unlinkContactTag(${contact.id}, '${contact.tag_id}')">🔗 Ontkoppelen</button>` : ''}
+                                    <button class="btn btn-danger" onclick="deleteContact(${contact.id})">🗑️ Verwijderen</button>
+                                </td>
+                            `;
+                            
+                            const option = document.createElement('option');
+                            option.value = contact.id;
+                            option.textContent = `${contact.full_name} (${contact.company || 'Geen bedrijf'})`;
+                            select.appendChild(option);
+                        });
+                        
+                        if (currentSelection || savedSelections.quickContact) {
+                            const valueToRestore = currentSelection || savedSelections.quickContact;
+                            if (select.querySelector(`option[value="${valueToRestore}"]`)) {
+                                select.value = valueToRestore;
+                                savedSelections.quickContact = valueToRestore;
+                            }
+                        }
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="6">📭 Geen contacten gevonden</td></tr>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading contacts:', error);
+                });
+        }
+        
+        function loadScanners() {
+            fetch('admin_scanners_api.php?action=list')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('quickScanner');
+                    
+                    const currentSelection = select.value;
+                    select.innerHTML = '<option value="">Alle scanners</option>';
+                    
+                    if (data.scanners && data.scanners.length > 0) {
+                        data.scanners.forEach(scanner => {
+                            const option = document.createElement('option');
+                            option.value = scanner.scanner_id;
+                            option.textContent = `${scanner.scanner_id} (${scanner.location || 'Geen locatie'})`;
+                            select.appendChild(option);
+                        });
+                        
+                        if (currentSelection || savedSelections.quickScanner) {
+                            const valueToRestore = currentSelection || savedSelections.quickScanner;
+                            if (select.querySelector(`option[value="${valueToRestore}"]`)) {
+                                select.value = valueToRestore;
+                                savedSelections.quickScanner = valueToRestore;
+                            }
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading scanners:', error);
+                });
+        }
+        
+        function loadTagLinks() {
+            fetch('tag_management_api.php?action=tag_links')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.querySelector('#tagLinksTable tbody');
+                    tbody.innerHTML = '';
+                    
+                    if (data.links && data.links.length > 0) {
+                        if (data.links.length > lastTagLinksCount && lastTagLinksCount > 0) {
+                            showSuccessMessage('✅ Nieuwe tag koppeling gedetecteerd!');
+                        }
+                        lastTagLinksCount = data.links.length;
+                        
+                        data.links.forEach(link => {
+                            const row = tbody.insertRow();
+                            row.innerHTML = `
+                                <td><code>${link.tag_id}</code></td>
+                                <td><strong>${link.contact_name}</strong></td>
+                                <td>${link.company || '-'}</td>
+                                <td>${link.scanner_id || '-'}</td>
+                                <td>${formatDate(link.linked_at)}</td>
+                                <td>
+                                    <button class="btn btn-danger" onclick="unlinkTag('${link.tag_id}')">🔗 Ontkoppelen</button>
+                                </td>
+                            `;
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="6">📭 Geen tag koppelingen gevonden</td></tr>';
+                        lastTagLinksCount = 0;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading tag links:', error);
+                });
+        }
+        
+        function loadPendingScans() {
+            fetch('tag_management_api.php?action=pending_scans')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.querySelector('#pendingTable tbody');
+                    tbody.innerHTML = '';
+                    
+                    const pendingCount = data.pending ? data.pending.length : 0;
+                    
+                    document.getElementById('pendingCount').textContent = pendingCount;
+                    const pendingTabCount = document.getElementById('pendingTabCount');
+                    if (pendingCount > 0) {
+                        pendingTabCount.textContent = pendingCount;
+                        pendingTabCount.style.display = 'inline';
+                    } else {
+                        pendingTabCount.style.display = 'none';
+                    }
+                    
+                    if (pendingCount < lastPendingCount && lastPendingCount > 0) {
+                        showSuccessMessage('✅ Tag succesvol gekoppeld!');
+                        clearWaitingStatus();
+                        resumeAutoRefresh();
+                    }
+                    lastPendingCount = pendingCount;
+                    
+                    if (data.pending && data.pending.length > 0) {
+                        data.pending.forEach(pending => {
+                            const row = tbody.insertRow();
+                            row.innerHTML = `
+                                <td><strong>${pending.contact_name}</strong></td>
+                                <td>${pending.scanner_id || 'Alle scanners'}</td>
+                                <td>${formatDate(pending.created_at)}</td>
+                                <td>${formatDate(pending.expires_at)}</td>
+                                <td><span class="status-waiting pulse">${pending.status}</span></td>
+                                <td>
+                                    <button class="btn btn-danger" onclick="cancelPendingScan(${pending.id})">❌ Annuleren</button>
+                                </td>
+                            `;
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="6">📭 Geen wachtende scans</td></tr>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading pending scans:', error);
+                });
+        }
+        
+        function loadRecentScans() {
+            fetch('tag_management_api.php?action=recent_scans')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.querySelector('#scansTable tbody');
+                    tbody.innerHTML = '';
+                    
+                    if (data.scans && data.scans.length > 0) {
+                        data.scans.forEach(scan => {
+                            const row = tbody.insertRow();
+                            row.innerHTML = `
+                                <td>${formatDate(scan.created_at)}</td>
+                                <td><code>${scan.tag_id}</code></td>
+                                <td><strong>${scan.display_name || scan.contact_name || 'Onbekend'}</strong></td>
+                                <td>${scan.scanner_id}</td>
+                                <td>${scan.location || '-'}</td>
+                                <td>${scan.project_name || '-'}</td>
+                            `;
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="6">📭 Geen recente scans</td></tr>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading recent scans:', error);
+                });
+        }
+        
+        // ===== NIEUWE ONTKOPPEL FUNCTIES =====
+        
+        function unlinkTagById() {
+            const tagId = document.getElementById('unlinkTagId').value.trim();
+            
+            if (!tagId) {
+                showUnlinkMessage('⚠️ Voer eerst een Tag ID in', 'error');
+                return;
+            }
+            
+            if (confirm(`Weet je zeker dat je tag "${tagId}" wilt ontkoppelen van het contact?`)) {
+                const formData = new FormData();
+                formData.append('action', 'unlink_tag');
+                formData.append('tag_id', tagId);
+                
+                fetch('tag_management_api.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showUnlinkMessage('✅ Tag succesvol ontkoppeld!', 'success');
+                        document.getElementById('unlinkTagId').value = '';
+                        loadTagLinks();
+                        loadContacts();
+                    } else {
+                        showUnlinkMessage('❌ Fout bij ontkoppelen: ' + (data.error || 'Onbekende fout'), 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error unlinking tag:', error);
+                    showUnlinkMessage('❌ Netwerkfout bij ontkoppelen', 'error');
+                });
+            }
+        }
+        
+        function unlinkContactTag(contactId, tagId) {
+            if (confirm(`Weet je zeker dat je tag "${tagId}" wilt ontkoppelen van dit contact?`)) {
+                unlinkTag(tagId);
+            }
+        }
+        
+        function showUnlinkMessage(message, type) {
+            const statusDiv = document.getElementById('unlinkStatus');
+            const className = type === 'success' ? 'status-success' : 'status-error';
+            statusDiv.innerHTML = `<div class="${className}">${message}</div>`;
+            
+            setTimeout(() => {
+                const messageDiv = statusDiv.querySelector(`.${className}`);
+                if (messageDiv) {
+                    messageDiv.classList.add('fade-out');
+                    setTimeout(() => {
+                        if (statusDiv.contains(messageDiv)) {
+                            statusDiv.removeChild(messageDiv);
+                        }
+                    }, 500);
+                }
+            }, 3000);
+        }
+        
+        function showSuccessMessage(message) {
+            const statusDiv = document.getElementById('waitingStatus');
+            statusDiv.innerHTML = `<div class="status-success">${message}</div>`;
+            
+            setTimeout(() => {
+                const successDiv = statusDiv.querySelector('.status-success');
+                if (successDiv) {
+                    successDiv.classList.add('fade-out');
+                    setTimeout(() => {
+                        if (statusDiv.contains(successDiv)) {
+                            statusDiv.removeChild(successDiv);
+                        }
+                    }, 500);
+                }
+            }, 3000);
+        }
+        
+        function clearWaitingStatus() {
+            const statusDiv = document.getElementById('waitingStatus');
+            const waitingDiv = statusDiv.querySelector('.status-waiting');
+            if (waitingDiv) {
+                waitingDiv.classList.add('fade-out');
+                setTimeout(() => {
+                    if (statusDiv.contains(waitingDiv)) {
+                        statusDiv.removeChild(waitingDiv);
+                    }
+                }, 500);
+            }
+        }
+        
+        function waitForScan() {
+            const contactId = document.getElementById('quickContact').value;
+            const scannerId = document.getElementById('quickScanner').value;
+            
+            if (!contactId) {
+                alert('Selecteer eerst een contact');
+                return;
+            }
+            
+            pauseAutoRefresh();
+            
+            const formData = new FormData();
+            formData.append('action', 'wait_for_scan');
+            formData.append('contact_id', contactId);
+            formData.append('scanner_id', scannerId);
+            
+            fetch('tag_management_api.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('waitingStatus').innerHTML = 
+                        '<div class="status-waiting pulse">⏳ Wacht op scan... Scan nu een tag met de geselecteerde scanner. Auto-refresh is gepauzeerd.</div>';
+                    loadPendingScans();
+                } else {
+                    alert('❌ Fout: ' + (data.error || 'Onbekende fout'));
+                }
+            })
+            .catch(error => {
+                console.error('Error setting up wait for scan:', error);
+            });
+        }
+        
+        function cancelPendingScan(pendingId) {
+            const formData = new FormData();
+            formData.append('action', 'cancel_pending_scan');
+            formData.append('id', pendingId);
+            
+            fetch('tag_management_api.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadPendingScans();
+                    clearWaitingStatus();
+                    resumeAutoRefresh();
+                } else {
+                    alert('❌ Fout bij annuleren: ' + (data.error || 'Onbekende fout'));
+                }
+            })
+            .catch(error => {
+                console.error('Error canceling pending scan:', error);
+            });
+        }
+        
+        function unlinkTag(tagId) {
+            if (confirm('Weet je zeker dat je deze tag wilt ontkoppelen?')) {
+                const formData = new FormData();
+                formData.append('action', 'unlink_tag');
+                formData.append('tag_id', tagId);
+                
+                fetch('tag_management_api.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ Tag ontkoppeld!');
+                        loadTagLinks();
+                        loadContacts();
+                    } else {
+                        alert('❌ Fout bij ontkoppelen: ' + (data.error || 'Onbekende fout'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error unlinking tag:', error);
+                });
+            }
+        }
+        
+        // Overige functies blijven hetzelfde...
+        function showAddContactModal() {
+            document.getElementById('contactModalTitle').textContent = '➕ Nieuw Contact';
+            document.getElementById('contactForm').reset();
+            document.getElementById('contactId').value = '';
+            document.getElementById('contactModal').style.display = 'block';
+        }
+        
+        function editContact(contactId) {
+            fetch(`tag_management_api.php?action=get_contact&id=${contactId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.contact) {
+                        const contact = data.contact;
+                        document.getElementById('contactModalTitle').textContent = '✏️ Contact Bewerken';
+                        document.getElementById('contactId').value = contact.id;
+                        document.getElementById('fullName').value = contact.full_name;
+                        document.getElementById('functionTitle').value = contact.function_title || '';
+                        document.getElementById('company').value = contact.company || '';
+                        document.getElementById('email').value = contact.email || '';
+                        document.getElementById('phone').value = contact.phone || '';
+                        document.getElementById('dietaryRequirements').value = contact.dietary_requirements || '';
+                        document.getElementById('notes').value = contact.notes || '';
+                        document.getElementById('contactModal').style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading contact:', error);
+                });
+        }
+        
+        function saveContact() {
+            const formData = new FormData();
+            formData.append('action', 'save_contact');
+            formData.append('id', document.getElementById('contactId').value);
+            formData.append('full_name', document.getElementById('fullName').value);
+            formData.append('function_title', document.getElementById('functionTitle').value);
+            formData.append('company', document.getElementById('company').value);
+            formData.append('email', document.getElementById('email').value);
+            formData.append('phone', document.getElementById('phone').value);
+            formData.append('dietary_requirements', document.getElementById('dietaryRequirements').value);
+            formData.append('notes', document.getElementById('notes').value);
+            
+            fetch('tag_management_api.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ Contact opgeslagen!');
+                    document.getElementById('contactModal').style.display = 'none';
+                    loadContacts();
+                } else {
+                    alert('❌ Fout bij opslaan: ' + (data.error || 'Onbekende fout'));
+                }
+            })
+            .catch(error => {
+                console.error('Error saving contact:', error);
+                alert('❌ Netwerkfout bij opslaan');
+            });
+        }
+        
+        function deleteContact(contactId) {
+            if (confirm('Weet je zeker dat je dit contact wilt verwijderen?')) {
+                const formData = new FormData();
+                formData.append('action', 'delete_contact');
+                formData.append('id', contactId);
+                
+                fetch('tag_management_api.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ Contact verwijderd!');
+                        loadContacts();
+                    } else {
+                        alert('❌ Fout bij verwijderen: ' + (data.error || 'Onbekende fout'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting contact:', error);
+                });
+            }
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleString('nl-NL');
+        }
+        
+        function updateLastRefreshTime() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('nl-NL');
+        }
+        
+        window.addEventListener('beforeunload', function() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+            if (pauseTimeout) {
+                clearTimeout(pauseTimeout);
+            }
+        });
+    </script>
+</body>
+</html>
