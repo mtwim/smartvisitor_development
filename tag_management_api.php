@@ -154,6 +154,15 @@ function handleSaveContact($pdo) {
                 INSERT INTO contacts (full_name, function_title, company, email, phone, dietary_requirements, notes) 
                 VALUES (:full_name, :function_title, :company, :email, :phone, :dietary_requirements, :notes)
             ");
+            $params = [
+                'full_name' => $full_name,
+                'function_title' => $function_title ?: null,
+                'company' => $company ?: null,
+                'email' => $email ?: null,
+                'phone' => $phone ?: null,
+                'dietary_requirements' => $dietary_requirements ?: null,
+                'notes' => $notes ?: null
+            ];
         } else {
             // Bestaand contact updaten
             $stmt = $pdo->prepare("
@@ -162,21 +171,48 @@ function handleSaveContact($pdo) {
                     email = :email, phone = :phone, dietary_requirements = :dietary_requirements, notes = :notes
                 WHERE id = :id
             ");
-            $stmt->bindParam(':id', $id);
+            $params = [
+                'full_name' => $full_name,
+                'function_title' => $function_title ?: null,
+                'company' => $company ?: null,
+                'email' => $email ?: null,
+                'phone' => $phone ?: null,
+                'dietary_requirements' => $dietary_requirements ?: null,
+                'notes' => $notes ?: null,
+                'id' => $id
+            ];
         }
-        
-        $stmt->execute([
-            'full_name' => $full_name,
-            'function_title' => $function_title ?: null,
-            'company' => $company ?: null,
-            'email' => $email ?: null,
-            'phone' => $phone ?: null,
-            'dietary_requirements' => $dietary_requirements ?: null,
-            'notes' => $notes ?: null
+        $stmt->execute($params);
+        // Logging toevoegen
+        $logStmt = $pdo->prepare("
+            INSERT INTO system_logs (log_level, context, message, extra)
+            VALUES ('info', 'contact_save', :message, :extra)
+        ");
+        $logStmt->execute([
+            'message' => empty($id) ? 'Contact aangemaakt' : 'Contact bijgewerkt',
+            'extra' => json_encode([
+                'id' => $id,
+                'full_name' => $full_name,
+                'company' => $company,
+                'email' => $email
+            ])
         ]);
-        
         echo json_encode(['success' => true]);
     } catch (Exception $e) {
+        // Logging van fout
+        $logStmt = $pdo->prepare("
+            INSERT INTO system_logs (log_level, context, message, extra)
+            VALUES ('error', 'contact_save', :message, :extra)
+        ");
+        $logStmt->execute([
+            'message' => 'Fout bij opslaan contact: ' . $e->getMessage(),
+            'extra' => json_encode([
+                'id' => $id,
+                'full_name' => $full_name,
+                'company' => $company,
+                'email' => $email
+            ])
+        ]);
         echo json_encode(['error' => 'Failed to save contact: ' . $e->getMessage()]);
     }
 }
@@ -337,14 +373,16 @@ function handleProcessScan($pdo) {
         if ($pending) {
             $stmt = $pdo->prepare("
                 INSERT INTO tag_contacts (tag_id, contact_id, scanner_id, linked_by) 
-                VALUES (:tag_id, :contact_id, :scanner_id, 'auto_scan')
+                VALUES (:tag_id, :contact_id_insert, :scanner_id_insert, 'auto_scan')
                 ON DUPLICATE KEY UPDATE 
-                contact_id = :contact_id, scanner_id = :scanner_id, linked_at = NOW(), status = 'active'
+                contact_id = :contact_id_update, scanner_id = :scanner_id_update, linked_at = NOW(), status = 'active'
             ");
             $stmt->execute([
                 'tag_id' => $tag_id,
-                'contact_id' => $pending['contact_id'],
-                'scanner_id' => $scanner_id
+                'contact_id_insert' => $pending['contact_id'],
+                'scanner_id_insert' => $scanner_id,
+                'contact_id_update' => $pending['contact_id'],
+                'scanner_id_update' => $scanner_id
             ]);
             
             $stmt = $pdo->prepare("UPDATE pending_scans SET status = 'completed' WHERE id = :id");
