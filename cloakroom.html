@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartVisitor Garderobe</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .scan-area {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .scan-area.active {
+            border-color: #198754;
+            background-color: #f8fff9;
+        }
+        .item-card {
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        .item-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .status-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        .contact-info {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .scanner-select {
+            margin-bottom: 20px;
+        }
+        .recent-scans {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <h1 class="mb-4">SmartVisitor Garderobe</h1>
+        
+        <!-- Scanner Selectie -->
+        <div class="scanner-select">
+            <label for="scannerSelect" class="form-label">Selecteer Scanner:</label>
+            <select id="scannerSelect" class="form-select">
+                <option value="">Laden...</option>
+            </select>
+        </div>
+
+        <!-- Scan Area -->
+        <div id="scanArea" class="scan-area">
+            <i class="bi bi-upc-scan fs-1"></i>
+            <h3>Scan RFID Tag</h3>
+            <p class="text-muted">Wacht op scan...</p>
+        </div>
+
+        <!-- Contact Info (verborgen tot scan) -->
+        <div id="contactInfo" class="contact-info" style="display: none;">
+            <h4 id="contactName"></h4>
+            <p id="contactCompany" class="text-muted"></p>
+        </div>
+
+        <!-- Items Overzicht -->
+        <div id="itemsOverview" style="display: none;">
+            <h3>Items</h3>
+            <div id="itemsList" class="row"></div>
+        </div>
+
+        <!-- Recente Scans -->
+        <div class="mt-4">
+            <h3>Recente Scans</h3>
+            <div id="recentScans" class="recent-scans"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentScanner = '';
+        let currentTag = '';
+        let pollInterval = null;
+
+        // Laad scanners
+        async function loadScanners() {
+            try {
+                const response = await fetch('api/scanner_api.php?action=list');
+                const data = await response.json();
+                
+                const select = document.getElementById('scannerSelect');
+                select.innerHTML = '<option value="">Selecteer scanner...</option>';
+                
+                data.scanners.forEach(scanner => {
+                    const option = document.createElement('option');
+                    option.value = scanner.scanner_id;
+                    option.textContent = `${scanner.location} (${scanner.scanner_id})`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Fout bij laden scanners:', error);
+            }
+        }
+
+        // Scanner selectie handler
+        document.getElementById('scannerSelect').addEventListener('change', function(e) {
+            currentScanner = e.target.value;
+            if (currentScanner) {
+                startPolling();
+            } else {
+                stopPolling();
+            }
+        });
+
+        // Start polling voor nieuwe scans
+        function startPolling() {
+            stopPolling(); // Stop bestaande polling
+            pollInterval = setInterval(checkNewScans, 1000);
+        }
+
+        // Stop polling
+        function stopPolling() {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+        }
+
+        // Check nieuwe scans
+        async function checkNewScans() {
+            if (!currentScanner) return;
+
+            try {
+                console.log('Checking for new scans...', { scanner: currentScanner });
+                
+                // Gebruik dezelfde API als de monitor
+                const response = await fetch(`api/scan_monitor_api.php?action=get_recent_scans&scanner_id=${currentScanner}&limit=1`);
+                const data = await response.json();
+                
+                console.log('Scan monitor response:', data);
+                
+                if (data.scans && data.scans.length > 0) {
+                    const latestScan = data.scans[0];
+                    console.log('Latest scan:', latestScan);
+                    
+                    // Check of dit een nieuwe scan is
+                    if (latestScan.tag_id && latestScan.tag_id !== currentTag) {
+                        console.log('New tag detected:', latestScan.tag_id);
+                        currentTag = latestScan.tag_id;
+                        
+                        // Haal contact info op
+                        console.log('Fetching contact info...');
+                        const contactResponse = await fetch(`api/tag_management_api.php?action=get_contact&tag_id=${latestScan.tag_id}`);
+                        const contactData = await contactResponse.json();
+                        console.log('Contact data:', contactData);
+                        
+                        if (contactData.contact) {
+                            // Toon contact info
+                            const contactInfo = document.getElementById('contactInfo');
+                            const contactName = document.getElementById('contactName');
+                            const contactCompany = document.getElementById('contactCompany');
+                            
+                            contactName.textContent = contactData.contact.full_name;
+                            contactCompany.textContent = contactData.contact.company || '';
+                            contactInfo.style.display = 'block';
+                            
+                            // Update scan area
+                            const scanArea = document.getElementById('scanArea');
+                            scanArea.classList.add('active');
+                            scanArea.querySelector('p').textContent = 'Tag gescand!';
+                            
+                            // Reset na 5 seconden
+                            setTimeout(() => {
+                                scanArea.classList.remove('active');
+                                scanArea.querySelector('p').textContent = 'Wacht op scan...';
+                            }, 5000);
+                            
+                            // Haal items op voor dit contact
+                            console.log('Fetching contact items...');
+                            const itemsResponse = await fetch(`api/cloakroom_api.php?action=get_contact_items&tag_id=${latestScan.tag_id}`);
+                            const itemsData = await itemsResponse.json();
+                            console.log('Items data:', itemsData);
+                            updateItemsList(itemsData.items);
+                        } else {
+                            console.warn('No contact found for tag:', latestScan.tag_id);
+                        }
+                    } else {
+                        console.log('No new tag detected');
+                    }
+                } else {
+                    console.log('No scans found');
+                }
+            } catch (error) {
+                console.error('Error checking scans:', error);
+            }
+        }
+
+        // Update items lijst
+        function updateItemsList(items) {
+            console.log('Updating items list:', items);
+            
+            const itemsList = document.getElementById('itemsList');
+            const itemsOverview = document.getElementById('itemsOverview');
+            
+            itemsList.innerHTML = '';
+            
+            if (items && items.length > 0) {
+                items.forEach(item => {
+                    console.log('Adding item to list:', item);
+                    const col = document.createElement('div');
+                    col.className = 'col-md-6 col-lg-4';
+                    col.innerHTML = `
+                        <div class="card item-card">
+                            <div class="card-body">
+                                <span class="badge bg-success status-badge">Ingecheckt</span>
+                                <h5 class="card-title">${item.item_description}</h5>
+                                <p class="card-text">
+                                    <small class="text-muted">
+                                        Ingecheckt: ${new Date(item.checked_in_at).toLocaleString()}<br>
+                                        Locatie: ${item.scanner_location || 'Onbekend'}
+                                    </small>
+                                </p>
+                                <button class="btn btn-outline-danger btn-sm" onclick="checkOutItem(${item.id})">
+                                    <i class="bi bi-box-arrow-right"></i> Uitchecken
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    itemsList.appendChild(col);
+                });
+                itemsOverview.style.display = 'block';
+            } else {
+                console.log('No items to display');
+                itemsOverview.style.display = 'none';
+            }
+        }
+
+        // Check out item
+        async function checkOutItem(itemId) {
+            console.log('Checking out item:', itemId);
+            
+            if (!currentScanner || !currentTag) {
+                console.warn('No active scanner or tag');
+                alert('Geen actieve scanner of tag');
+                return;
+            }
+
+            try {
+                console.log('Sending check-out request...');
+                const response = await fetch('api/cloakroom_api.php?action=check_out', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `item_id=${itemId}&tag_id=${currentTag}&scanner_id=${currentScanner}`
+                });
+                
+                const data = await response.json();
+                console.log('Check-out response:', data);
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Herlaad items
+                console.log('Reloading items...');
+                const itemsResponse = await fetch(`api/cloakroom_api.php?action=get_contact_items&tag_id=${currentTag}`);
+                const itemsData = await itemsResponse.json();
+                console.log('Reloaded items:', itemsData);
+                updateItemsList(itemsData.items);
+
+            } catch (error) {
+                console.error('Error checking out item:', error);
+                alert('Fout bij uitchecken item: ' + error.message);
+            }
+        }
+
+        // Laad recente scans
+        async function loadRecentScans() {
+            try {
+                const response = await fetch('api/cloakroom_api.php?action=get_recent_scans');
+                const data = await response.json();
+                
+                const recentScans = document.getElementById('recentScans');
+                recentScans.innerHTML = '';
+                
+                data.scans.forEach(scan => {
+                    const div = document.createElement('div');
+                    div.className = 'card mb-2';
+                    div.innerHTML = `
+                        <div class="card-body">
+                            <h6 class="card-title">${scan.contact_name}</h6>
+                            <p class="card-text">
+                                ${scan.item_description}<br>
+                                <small class="text-muted">
+                                    ${scan.action === 'check_in' ? 'Ingecheckt' : 'Uitgecheckt'} op 
+                                    ${new Date(scan.scan_time).toLocaleString()}<br>
+                                    Locatie: ${scan.scanner_location}
+                                </small>
+                            </p>
+                        </div>
+                    `;
+                    recentScans.appendChild(div);
+                });
+            } catch (error) {
+                console.error('Fout bij laden recente scans:', error);
+            }
+        }
+
+        // Initialiseer
+        document.addEventListener('DOMContentLoaded', () => {
+            loadScanners();
+            loadRecentScans();
+            // Herlaad recente scans elke 30 seconden
+            setInterval(loadRecentScans, 30000);
+        });
+    </script>
+</body>
+</html> 

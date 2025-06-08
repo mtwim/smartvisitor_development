@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartVisitor Garderobe v2</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .scan-area { border: 2px dashed #ccc; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; }
+        .scan-area.active { border-color: #198754; background-color: #f8fff9; }
+        .item-card { margin-bottom: 10px; transition: all 0.3s ease; }
+        .item-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .status-badge { position: absolute; top: 10px; right: 10px; }
+        .contact-info { background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .items-overview { margin-top: 20px; }
+        .log-console { background: #222; color: #b2f542; font-size: 0.95em; padding: 10px; border-radius: 6px; max-height: 180px; overflow-y: auto; margin-top: 20px; }
+    </style>
+</head>
+<body>
+<div class="container py-4">
+    <h1 class="mb-4">SmartVisitor Garderobe v2</h1>
+
+    <!-- Scan Area -->
+    <div id="scanArea" class="scan-area">
+        <i class="bi bi-upc-scan fs-1"></i>
+        <h3>Scan RFID Tag</h3>
+        <p class="text-muted">Wacht op scan...</p>
+    </div>
+
+    <!-- Contact Info -->
+    <div id="contactInfo" class="contact-info" style="display: none;">
+        <h4 id="contactName"></h4>
+        <p id="contactCompany" class="text-muted"></p>
+    </div>
+
+    <!-- Item Inname -->
+    <div id="itemInForm" style="display: none;">
+        <h5>Nieuw item innemen</h5>
+        <form id="checkInForm" class="row g-2">
+            <div class="col-md-8">
+                <input type="text" class="form-control" id="itemDescription" placeholder="Omschrijving item" required>
+            </div>
+            <div class="col-md-4">
+                <input type="text" class="form-control" id="itemNotes" placeholder="Notities (optioneel)">
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-success">Innemen</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Items Overzicht -->
+    <div id="itemsOverview" class="items-overview" style="display: none;">
+        <h5>Items van deze gast</h5>
+        <div id="itemsList" class="row"></div>
+    </div>
+
+    <!-- Logging/Debug -->
+    <div class="log-console" id="logConsole"></div>
+</div>
+
+<script>
+let currentTag = '';
+let pollInterval = null;
+
+function log(msg, data) {
+    const logConsole = document.getElementById('logConsole');
+    const time = new Date().toLocaleTimeString();
+    logConsole.innerHTML = `[${time}] ${msg}` + (data ? `<br><pre>${JSON.stringify(data, null, 2)}</pre>` : '') + '<hr>' + logConsole.innerHTML;
+}
+
+async function pollLastScan() {
+    try {
+        const response = await fetch('api/cloakroom_v2_api.php?action=get_last_scan&scanner_id=cloakroom');
+        const result = await response.json();
+        log('Laatste scan opgehaald', result);
+        if (result.scan && result.scan.tag_id && result.scan.tag_id !== currentTag) {
+            currentTag = result.scan.tag_id;
+            showContactInfo(currentTag);
+        }
+    } catch (e) {
+        log('Fout bij ophalen laatste scan', e);
+    }
+}
+
+async function showContactInfo(tag_id) {
+    try {
+        const response = await fetch(`api/cloakroom_v2_api.php?action=get_contact_info&tag_id=${tag_id}`);
+        const result = await response.json();
+        log('Contact info opgehaald', result);
+        if (result.contact) {
+            document.getElementById('contactName').textContent = result.contact.full_name;
+            document.getElementById('contactCompany').textContent = result.contact.company || '';
+            document.getElementById('contactInfo').style.display = 'block';
+            document.getElementById('itemInForm').style.display = 'block';
+            loadItemsForContact(tag_id);
+        } else {
+            document.getElementById('contactInfo').style.display = 'none';
+            document.getElementById('itemInForm').style.display = 'none';
+            document.getElementById('itemsOverview').style.display = 'none';
+        }
+    } catch (e) {
+        log('Fout bij ophalen contact info', e);
+    }
+}
+
+async function loadItemsForContact(tag_id) {
+    try {
+        const response = await fetch(`api/cloakroom_v2_api.php?action=get_items_for_contact&tag_id=${tag_id}`);
+        const result = await response.json();
+        log('Items voor contact opgehaald', result);
+        updateItemsList(result.items || []);
+    } catch (e) {
+        log('Fout bij ophalen items', e);
+    }
+}
+
+function updateItemsList(items) {
+    const itemsList = document.getElementById('itemsList');
+    itemsList.innerHTML = '';
+    if (items.length > 0) {
+        items.forEach(item => {
+            const col = document.createElement('div');
+            col.className = 'col-md-6 col-lg-4';
+            col.innerHTML = `
+                <div class="card item-card position-relative">
+                    <div class="card-body">
+                        <span class="badge bg-${item.status === 'checked_in' ? 'success' : 'secondary'} status-badge">${item.status === 'checked_in' ? 'Ingecheckt' : 'Uitgecheckt'}</span>
+                        <h5 class="card-title">${item.item_description}</h5>
+                        <p class="card-text">
+                            <small class="text-muted">
+                                In: ${new Date(item.checked_in_at).toLocaleString()}<br>
+                                ${item.checked_out_at ? 'Uit: ' + new Date(item.checked_out_at).toLocaleString() + '<br>' : ''}
+                                ${item.notes ? 'Notitie: ' + item.notes + '<br>' : ''}
+                            </small>
+                        </p>
+                        ${item.status === 'checked_in' ? `<button class="btn btn-outline-danger btn-sm" onclick="checkOutItem(${item.id})">Uitgeven</button>` : ''}
+                    </div>
+                </div>
+            `;
+            itemsList.appendChild(col);
+        });
+        document.getElementById('itemsOverview').style.display = 'block';
+    } else {
+        document.getElementById('itemsOverview').style.display = 'none';
+    }
+}
+
+async function checkOutItem(itemId) {
+    try {
+        const response = await fetch('api/cloakroom_v2_api.php?action=check_out_item', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `item_id=${itemId}`
+        });
+        const result = await response.json();
+        log('Item uitgegeven', result);
+        if (result.success) {
+            loadItemsForContact(currentTag);
+        }
+    } catch (e) {
+        log('Fout bij uitgeven item', e);
+    }
+}
+
+document.getElementById('checkInForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const itemDescription = document.getElementById('itemDescription').value.trim();
+    const itemNotes = document.getElementById('itemNotes').value.trim();
+    if (!itemDescription) return;
+    try {
+        const response = await fetch('api/cloakroom_v2_api.php?action=check_in_item', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `tag_id=${currentTag}&item_description=${encodeURIComponent(itemDescription)}&notes=${encodeURIComponent(itemNotes)}`
+        });
+        const result = await response.json();
+        log('Item ingenomen', result);
+        if (result.success) {
+            document.getElementById('itemDescription').value = '';
+            document.getElementById('itemNotes').value = '';
+            loadItemsForContact(currentTag);
+        }
+    } catch (e) {
+        log('Fout bij innemen item', e);
+    }
+});
+
+// Start polling
+function startPolling() {
+    pollLastScan();
+    pollInterval = setInterval(pollLastScan, 1200);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    startPolling();
+});
+</script>
+</body>
+</html> 
